@@ -1,21 +1,30 @@
 import { Contract, ethers } from 'ethers';
 import { useEffect, useState } from 'react';
-import deploy from './deploy';
-import EscrowItem from './EscrowItem';
-import EscrowManager from './artifacts/contracts/EscrowManager.sol/EscrowManager';
-import Escrow from './artifacts/contracts/Escrow.sol/Escrow';
-
-const provider = new ethers.providers.Web3Provider(window.ethereum);
+import deploy from '../components/deploy';
+import EscrowItem from '../components/EscrowItem';
+import EscrowManager from '../components/artifacts/contracts/EscrowManager.sol/EscrowManager';
+import Escrow from '../components/artifacts/contracts/Escrow.sol/Escrow';
 
 export async function approve(escrowContract, signer) {
   const approveTxn = await escrowContract.connect(signer).approve();
   await approveTxn.wait();
 }
 
-function App() {
+export default function Home() {
   const [escrows, setEscrows] = useState([]);
   const [account, setAccount] = useState();
   const [signer, setSigner] = useState();
+  const [provider, setProvider] = useState();
+  const [loadingEscrows, setLoadingEscrows] = useState(false);
+
+  useEffect(() => {
+    if (!provider) {
+      if (typeof window.ethereum !== 'undefined' || typeof window.web3 !== 'undefined') {
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        setProvider(provider);
+      }
+    }
+  });
 
   useEffect(() => {
     async function getAccounts() {
@@ -25,10 +34,16 @@ function App() {
       setSigner(provider.getSigner());
     }
 
+    if (provider && !account && !signer) {
+      getAccounts();
+    }
+  }, [provider]);
+
+  useEffect(() => {
     async function getEscrows() {
+      setLoadingEscrows(true);
       const factory = new Contract(EscrowManager.address, EscrowManager.abi, signer);
       const escrowAddresses = await factory.getEscrows(1, 10);
-      console.log(escrowAddresses);
 
       const escrows = await await Promise.all(
         escrowAddresses
@@ -36,14 +51,11 @@ function App() {
           .map(async (e) => {
             const escrowContract = new Contract(e, Escrow.abi, signer);
 
-            console.log(escrowContract);
-
             const arbiter = await escrowContract.arbiter();
             const beneficiary = await escrowContract.beneficiary();
             const isApproved = await escrowContract.isApproved();
             const balance = await provider.getBalance(escrowContract.address);
 
-            console.log(balance);
             return {
               address: escrowContract.address,
               arbiter,
@@ -63,14 +75,14 @@ function App() {
           })
       );
 
-      console.log(escrows);
-
       setEscrows(escrows);
+      setLoadingEscrows(false);
     }
 
-    getAccounts();
-    getEscrows();
-  }, [account]);
+    if (provider && account && signer && escrows.length === 0 && !loadingEscrows) {
+      getEscrows();
+    }
+  }, [provider, account, signer]);
 
   async function newContract() {
     const beneficiary = document.getElementById('beneficiary').value;
@@ -91,7 +103,6 @@ function App() {
           document.getElementById(escrowContract.address).innerText = "✓ It's been approved!";
         });
 
-        console.log(escrowContract, signer);
         await approve(escrowContract, signer);
       },
     };
@@ -143,5 +154,3 @@ function App() {
     </>
   );
 }
-
-export default App;
