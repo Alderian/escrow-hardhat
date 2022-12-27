@@ -1,7 +1,9 @@
-import { ethers } from "ethers";
-import { useEffect, useState } from "react";
-import deploy from "./deploy";
-import Escrow from "./Escrow";
+import { Contract, ethers } from 'ethers';
+import { useEffect, useState } from 'react';
+import deploy from './deploy';
+import EscrowItem from './EscrowItem';
+import EscrowManager from './artifacts/contracts/EscrowManager.sol/EscrowManager';
+import Escrow from './artifacts/contracts/Escrow.sol/Escrow';
 
 const provider = new ethers.providers.Web3Provider(window.ethereum);
 
@@ -17,22 +19,66 @@ function App() {
 
   useEffect(() => {
     async function getAccounts() {
-      const accounts = await provider.send("eth_requestAccounts", []);
+      const accounts = await provider.send('eth_requestAccounts', []);
 
       setAccount(accounts[0]);
       setSigner(provider.getSigner());
     }
 
+    async function getEscrows() {
+      const factory = new Contract(EscrowManager.address, EscrowManager.abi, signer);
+      const escrowAddresses = await factory.getEscrows(1, 10);
+      console.log(escrowAddresses);
+
+      const escrows = await await Promise.all(
+        escrowAddresses
+          .filter((e) => e !== '0x0000000000000000000000000000000000000000')
+          .map(async (e) => {
+            const escrowContract = new Contract(e, Escrow.abi, signer);
+
+            console.log(escrowContract);
+
+            const arbiter = await escrowContract.arbiter();
+            const beneficiary = await escrowContract.beneficiary();
+            const isApproved = await escrowContract.isApproved();
+            const balance = await provider.getBalance(escrowContract.address);
+
+            console.log(balance);
+            return {
+              address: escrowContract.address,
+              arbiter,
+              beneficiary,
+              isApproved,
+              value: ethers.utils.formatEther(balance),
+              handleApprove: async () => {
+                escrowContract.on('Approved', () => {
+                  document.getElementById(escrowContract.address).className = 'complete';
+                  document.getElementById(escrowContract.address).innerText =
+                    "✓ It's been approved!";
+                });
+
+                await approve(escrowContract, signer);
+              },
+            };
+          })
+      );
+
+      console.log(escrows);
+
+      setEscrows(escrows);
+    }
+
     getAccounts();
+    getEscrows();
   }, [account]);
 
   async function newContract() {
-    const beneficiary = document.getElementById("beneficiary").value;
-    const arbiter = document.getElementById("arbiter").value;
+    const beneficiary = document.getElementById('beneficiary').value;
+    const arbiter = document.getElementById('arbiter').value;
     const value = ethers.BigNumber.from(
-      ethers.utils.parseUnits(document.getElementById("wei").value, "ether")
+      ethers.utils.parseUnits(document.getElementById('wei').value, 'ether')
     );
-    const escrowContract = await deploy(signer, arbiter, beneficiary, value);
+    const escrowContract = await deploy(signer, 'test', arbiter, beneficiary, value);
 
     const escrow = {
       address: escrowContract.address,
@@ -40,18 +86,17 @@ function App() {
       beneficiary,
       value: ethers.utils.formatEther(value),
       handleApprove: async () => {
-        escrowContract.on("Approved", () => {
-          document.getElementById(escrowContract.address).className =
-            "complete";
-          document.getElementById(escrowContract.address).innerText =
-            "✓ It's been approved!";
+        escrowContract.on('Approved', () => {
+          document.getElementById(escrowContract.address).className = 'complete';
+          document.getElementById(escrowContract.address).innerText = "✓ It's been approved!";
         });
 
+        console.log(escrowContract, signer);
         await approve(escrowContract, signer);
       },
     };
 
-    setEscrows([...escrows, escrow]);
+    setEscrows([escrow, ...escrows]);
   }
 
   return (
@@ -91,7 +136,7 @@ function App() {
 
         <div id="container">
           {escrows.map((escrow) => {
-            return <Escrow key={escrow.address} {...escrow} />;
+            return <EscrowItem key={escrow.address} {...escrow} />;
           })}
         </div>
       </div>
