@@ -1,24 +1,38 @@
-const { ethers } = require('hardhat');
-const { expect } = require('chai');
-const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
+import { ethers } from 'hardhat';
+import { expect } from 'chai';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { Escrow, EscrowManager } from '../app/components/artifacts/typechain';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { BigNumber, ContractTransaction } from 'ethers';
 
 describe('Escrow', function () {
-  let escrowManager, depositor, beneficiary, arbiter, addr1, addr2, addr3;
+  let escrowManager: EscrowManager,
+    depositor: SignerWithAddress,
+    beneficiary: SignerWithAddress,
+    arbiter: SignerWithAddress,
+    addr1: SignerWithAddress,
+    addr2: SignerWithAddress,
+    addr3: SignerWithAddress;
 
   // Array of all created escrows for latter assert
-  let allEscrows = [];
+  let allEscrows: Array<string> = [];
 
   const deposit1Eth = ethers.utils.parseEther('1');
   const deposit2Eth = ethers.utils.parseEther('2');
 
-  const getDeployedEscrowAddress = async (fromTransaction) => {
+  const getDeployedEscrowAddress = async (fromTransaction: ContractTransaction) => {
     const rc = await fromTransaction.wait(); // 0ms, as tx is already confirmed
-    const event = rc.events.find((event) => event.event === 'Deployed');
-    const [escrowContractAddress] = event.args;
+    const event = rc.events?.find((event) => event.event === 'Deployed');
+    const [escrowContractAddress] = event?.args || [];
     return escrowContractAddress;
   };
 
-  const createEscrow = async (name, arbiterAddress, beneficiaryAddress, deposit) => {
+  const createEscrow = async (
+    name: string,
+    arbiterAddress: string,
+    beneficiaryAddress: string,
+    deposit: BigNumber
+  ) => {
     const createEscrowTxn = await escrowManager.createEscrow(
       name,
       arbiterAddress,
@@ -120,7 +134,7 @@ describe('Escrow', function () {
   });
 
   describe('Test one escrow', async () => {
-    let escrowContract, escrowAddress;
+    let escrowContract: Escrow, escrowAddress: string;
 
     before('Create one escrow', async () => {
       const createdEscrow = await createEscrow(

@@ -1,3 +1,12 @@
+export interface EscrowItemProps {
+  address: string,
+  arbiter: string,
+  beneficiary: string,
+  value: string,
+  isApproved?: boolean,
+  handleApprove: () => Promise<void>;
+}
+
 export default function EscrowItem({
   address,
   arbiter,
@@ -5,7 +14,7 @@ export default function EscrowItem({
   value,
   isApproved,
   handleApprove,
-}) {
+}: EscrowItemProps) {
   return (
     <div className="existing-contract">
       <ul className="fields">
@@ -26,7 +35,7 @@ export default function EscrowItem({
           <div> {value} ETH</div>
         </li>
         {isApproved ? (
-          <div className="complete">✓ It's been approved</div>
+          <div className="complete">✓ It&apos;s been approved</div>
         ) : (
           <div
             className="button"

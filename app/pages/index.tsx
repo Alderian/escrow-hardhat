@@ -1,60 +1,62 @@
-import { Contract, ethers } from 'ethers';
+import { Contract, ContractReceipt, ContractTransaction, ethers } from 'ethers';
 import { useEffect, useState } from 'react';
 import deploy from '../components/deploy';
-import EscrowItem from '../components/EscrowItem';
-import EscrowManager from '../components/artifacts/contracts/EscrowManager.sol/EscrowManager';
-import Escrow from '../components/artifacts/contracts/Escrow.sol/Escrow';
+import EscrowItem, { EscrowItemProps } from '../components/EscrowItem';
+import { escrowManagerContractAddress } from '../components/artifacts/escrowManager.config';
+import { EscrowManager__factory, Escrow__factory } from '../components/artifacts/typechain';
+import { JsonRpcSigner, Web3Provider } from '@ethersproject/providers';
 
-export async function approve(escrowContract, signer) {
-  const approveTxn = await escrowContract.connect(signer).approve();
-  await approveTxn.wait();
+export async function approve(escrowContract: Contract, signer: JsonRpcSigner): Promise<ContractReceipt> {
+  const approveTxn: ContractTransaction = await escrowContract.connect(signer).approve();
+  return approveTxn.wait();
 }
 
 export default function Home() {
-  const [escrows, setEscrows] = useState([]);
+  const [escrows, setEscrows] = useState<EscrowItemProps[]>([]);
   const [account, setAccount] = useState();
-  const [signer, setSigner] = useState();
-  const [provider, setProvider] = useState();
+  const [signer, setSigner] = useState<JsonRpcSigner>();
+  const [provider, setProvider] = useState<Web3Provider>();
   const [loadingEscrows, setLoadingEscrows] = useState(false);
 
   useEffect(() => {
     if (!provider) {
       if (typeof window.ethereum !== 'undefined' || typeof window.web3 !== 'undefined') {
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const provider = new Web3Provider(window.ethereum);
         setProvider(provider);
       }
     }
-  });
+  }, [provider]);
 
   useEffect(() => {
     async function getAccounts() {
-      const accounts = await provider.send('eth_requestAccounts', []);
+      const accounts = await provider!.send('eth_requestAccounts', []);
 
       setAccount(accounts[0]);
-      setSigner(provider.getSigner());
+      setSigner(provider!.getSigner());
     }
 
     if (provider && !account && !signer) {
       getAccounts();
     }
-  }, [provider]);
+  });
 
   useEffect(() => {
     async function getEscrows() {
       setLoadingEscrows(true);
-      const factory = new Contract(EscrowManager.address, EscrowManager.abi, signer);
+      debugger
+      const factory = new Contract(escrowManagerContractAddress, EscrowManager__factory.abi, signer);
       const escrowAddresses = await factory.getEscrows(1, 10);
 
-      const escrows = await await Promise.all(
+      const escrows: EscrowItemProps[] = await Promise.all(
         escrowAddresses
-          .filter((e) => e !== '0x0000000000000000000000000000000000000000')
-          .map(async (e) => {
-            const escrowContract = new Contract(e, Escrow.abi, signer);
+          .filter((e: string) => e !== '0x0000000000000000000000000000000000000000')
+          .map(async (e: string) => {
+            const escrowContract = new Contract(e, Escrow__factory.abi, signer);
 
             const arbiter = await escrowContract.arbiter();
             const beneficiary = await escrowContract.beneficiary();
             const isApproved = await escrowContract.isApproved();
-            const balance = await provider.getBalance(escrowContract.address);
+            const balance = await provider!.getBalance(escrowContract.address);
 
             return {
               address: escrowContract.address,
@@ -64,12 +66,12 @@ export default function Home() {
               value: ethers.utils.formatEther(balance),
               handleApprove: async () => {
                 escrowContract.on('Approved', () => {
-                  document.getElementById(escrowContract.address).className = 'complete';
-                  document.getElementById(escrowContract.address).innerText =
+                  document.getElementById(escrowContract.address)!.className = 'complete';
+                  document.getElementById(escrowContract.address)!.innerText =
                     "✓ It's been approved!";
                 });
 
-                await approve(escrowContract, signer);
+                await approve(escrowContract, signer!);
               },
             };
           })
@@ -82,28 +84,30 @@ export default function Home() {
     if (provider && account && signer && escrows.length === 0 && !loadingEscrows) {
       getEscrows();
     }
-  }, [provider, account, signer]);
+  });
 
   async function newContract() {
-    const beneficiary = document.getElementById('beneficiary').value;
-    const arbiter = document.getElementById('arbiter').value;
+    const beneficiary = (document.getElementById('beneficiary') as HTMLInputElement)!.value;
+    const arbiter = (document.getElementById('arbiter') as HTMLInputElement)!.value;
     const value = ethers.BigNumber.from(
-      ethers.utils.parseUnits(document.getElementById('wei').value, 'ether')
+      ethers.utils.parseUnits((document.getElementById('wei') as HTMLInputElement)!.value, 'ether')
     );
-    const escrowContract = await deploy(signer, 'test', arbiter, beneficiary, value);
+    const escrowContract = await deploy(signer!, 'test', arbiter, beneficiary, value);
 
-    const escrow = {
+    const escrow: EscrowItemProps = {
       address: escrowContract.address,
       arbiter,
       beneficiary,
+      isApproved: false,
       value: ethers.utils.formatEther(value),
       handleApprove: async () => {
         escrowContract.on('Approved', () => {
-          document.getElementById(escrowContract.address).className = 'complete';
-          document.getElementById(escrowContract.address).innerText = "✓ It's been approved!";
+          document.getElementById(escrowContract.address)!.className = 'complete';
+          document.getElementById(escrowContract.address)!.innerText =
+            "✓ It's been approved!";
         });
 
-        await approve(escrowContract, signer);
+        await approve(escrowContract, signer!);
       },
     };
 

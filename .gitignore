@@ -5,3 +5,7 @@ node_modules
 artifacts
 *.bck
 .env
+coverage
+coverage.json
+typechain
+typechain-types
