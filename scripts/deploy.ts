@@ -2,17 +2,23 @@ import { ethers, network } from 'hardhat';
 import dotenv from 'dotenv';
 dotenv.config();
 import fs from 'fs';
+import { EscrowManager, EscrowManager__factory } from '@/artifacts/typechain';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
 async function main() {
+  let escrowManager: EscrowManager,
+    deployer: SignerWithAddress,
+    EscrowManager: EscrowManager__factory;
+
   //get the signer that we will use to deploy
-  const [deployer] = await ethers.getSigners();
+  [deployer] = await ethers.getSigners();
 
   console.log('Deployer:', deployer.address);
   console.log('Balance:', ethers.utils.formatEther(await deployer.getBalance()));
 
   //Get the EscrowManager smart contract object and deploy it
-  const EscrowManager = await ethers.getContractFactory('EscrowManager');
-  const escrowManager = await EscrowManager.deploy();
+  EscrowManager = await ethers.getContractFactory('EscrowManager');
+  escrowManager = await EscrowManager.deploy();
 
   await escrowManager.deployed();
 

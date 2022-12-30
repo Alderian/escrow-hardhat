@@ -1,10 +1,10 @@
 import { Contract, ethers } from 'ethers';
 import { useEffect, useState } from 'react';
-import EscrowItem, { EscrowItemProps } from '../components/EscrowItem';
-import { escrowManagerContractAddress } from '../components/artifacts/escrowManager.config';
-import { EscrowManager__factory, Escrow__factory } from '../components/artifacts/typechain';
+import EscrowItem, { EscrowItemProps } from '@/components/EscrowItem';
+import { escrowManagerContractAddress } from '@/artifacts/escrowManager.config';
+import { EscrowManager__factory, Escrow__factory } from '@/artifacts/typechain';
 import { JsonRpcSigner, Web3Provider } from '@ethersproject/providers';
-import NewEscrowForm, { approve } from '../components/NewEscrowForm';
+import NewEscrowForm, { approve } from '@/components/NewEscrowForm';
 import Image from 'next/image';
 
 export default function Home() {

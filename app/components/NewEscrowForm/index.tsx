@@ -1,8 +1,8 @@
 import { JsonRpcSigner } from "@ethersproject/providers";
 import { Contract, ContractReceipt, ContractTransaction, ethers } from "ethers";
 import { Dispatch, SetStateAction } from "react";
-import deploy from '../deploy';
-import { EscrowItemProps } from "../EscrowItem";
+import deploy from '@/components/deploy';
+import { EscrowItemProps } from "@/components/EscrowItem";
 
 export interface NewEscrowFormProps {
     setEscrows: Dispatch<SetStateAction<EscrowItemProps[]>>,

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import * as React from "react";
-import { CopyTextToClip } from "./CopyTextToClip";
+import { CopyTextToClip } from "@/ui/CopyTextToClip";
 
 const sliceHash = (hash: string) => {
   return hash

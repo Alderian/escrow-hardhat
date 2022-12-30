@@ -1,4 +1,4 @@
-import Hash from "../ui/Hash";
+import Hash from "@/ui/Hash";
 
 export interface EscrowItemProps {
   name?: string,
@@ -41,7 +41,7 @@ export default function EscrowItem({
         </div>
         <div className="mt-4 h-11 text-center align-middle">
           {isApproved ? (
-              <p className="text-lg tracking-wider text-green-500 dark:text-green-400 "><strong>✓ Approved</strong></p>
+            <p className="text-lg tracking-wider text-green-500 dark:text-green-400 "><strong>✓ Approved</strong></p>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <button
