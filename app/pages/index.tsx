@@ -1,15 +1,11 @@
-import { Contract, ContractReceipt, ContractTransaction, ethers } from 'ethers';
+import { Contract, ethers } from 'ethers';
 import { useEffect, useState } from 'react';
-import deploy from '../components/deploy';
 import EscrowItem, { EscrowItemProps } from '../components/EscrowItem';
 import { escrowManagerContractAddress } from '../components/artifacts/escrowManager.config';
 import { EscrowManager__factory, Escrow__factory } from '../components/artifacts/typechain';
 import { JsonRpcSigner, Web3Provider } from '@ethersproject/providers';
-
-export async function approve(escrowContract: Contract, signer: JsonRpcSigner): Promise<ContractReceipt> {
-  const approveTxn: ContractTransaction = await escrowContract.connect(signer).approve();
-  return approveTxn.wait();
-}
+import NewEscrowForm, { approve } from '../components/NewEscrowForm';
+import Image from 'next/image';
 
 export default function Home() {
   const [escrows, setEscrows] = useState<EscrowItemProps[]>([]);
@@ -43,7 +39,6 @@ export default function Home() {
   useEffect(() => {
     async function getEscrows() {
       setLoadingEscrows(true);
-      debugger
       const factory = new Contract(escrowManagerContractAddress, EscrowManager__factory.abi, signer);
       const escrowAddresses = await factory.getEscrows(1, 10);
 
@@ -86,75 +81,47 @@ export default function Home() {
     }
   });
 
-  async function newContract() {
-    const beneficiary = (document.getElementById('beneficiary') as HTMLInputElement)!.value;
-    const arbiter = (document.getElementById('arbiter') as HTMLInputElement)!.value;
-    const value = ethers.BigNumber.from(
-      ethers.utils.parseUnits((document.getElementById('wei') as HTMLInputElement)!.value, 'ether')
-    );
-    const escrowContract = await deploy(signer!, 'test', arbiter, beneficiary, value);
-
-    const escrow: EscrowItemProps = {
-      address: escrowContract.address,
-      arbiter,
-      beneficiary,
-      isApproved: false,
-      value: ethers.utils.formatEther(value),
-      handleApprove: async () => {
-        escrowContract.on('Approved', () => {
-          document.getElementById(escrowContract.address)!.className = 'complete';
-          document.getElementById(escrowContract.address)!.innerText =
-            "✓ It's been approved!";
-        });
-
-        await approve(escrowContract, signer!);
-      },
-    };
-
-    setEscrows([escrow, ...escrows]);
-  }
-
   return (
     <>
-      <div className="contract">
-        <h1> New Contract </h1>
-        <label>
-          Arbiter Address
-          <input type="text" id="arbiter" />
-        </label>
-
-        <label>
-          Beneficiary Address
-          <input type="text" id="beneficiary" />
-        </label>
-
-        <label>
-          Deposit Amount (in Eth)
-          <input type="text" id="wei" />
-        </label>
-
-        <div
-          className="button"
-          id="deploy"
-          onClick={(e) => {
-            e.preventDefault();
-
-            newContract();
-          }}
-        >
-          Deploy
+      <div className="w-full flex items-center justify-around">
+        <div className="bg-gray-200 lg:flex items-center space-x-16">
+          <NewEscrowForm setEscrows={setEscrows} escrows={escrows} signer={signer!} />
+        </div >
+        <div className="lg:flex items-stretch">
+          <Image
+            width={741}
+            height={472}
+            src="/escrow.png" alt="Escrow" />
         </div>
       </div>
 
-      <div className="existing-contracts">
-        <h1> Existing Contracts </h1>
+      <section className="bg-white dark:bg-gray-900">
+        <div className="container px-6 py-12 mx-auto">
+          <h1 className="text-3xl font-semibold text-gray-800 lg:text-4xl dark:text-white">Existing Escrows</h1>
 
-        <div id="container">
-          {escrows.map((escrow) => {
-            return <EscrowItem key={escrow.address} {...escrow} />;
-          })}
+          <div className="mt-8 xl:mt-16 lg:flex lg:-mx-12">
+            <div className="lg:mx-12">
+              <h1 className="text-xl font-semibold text-gray-800 dark:text-white">Filter contracts</h1>
+
+              <div className="mt-4 space-y-4 lg:mt-8">
+                <a href="#" className="block text-blue-500 dark:text-blue-400 hover:underline">Show all</a>
+                <a href="#" className="block text-gray-500 dark:text-gray-300 hover:underline">New</a>
+                <a href="#" className="block text-gray-500 dark:text-gray-300 hover:underline">Approved</a>
+                <a href="#" className="block text-gray-500 dark:text-gray-300 hover:underline">Waiting your approval</a>
+                <a href="#" className="block text-gray-500 dark:text-gray-300 hover:underline">Approved by you</a>
+              </div>
+            </div>
+
+            <div className="flex-1 mt-8 lg:mx-12 lg:mt-0">
+              <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3 ">
+                {escrows.map((escrow) => {
+                  return <EscrowItem key={escrow.address} {...escrow} />;
+                })}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
     </>
-  );
+  )
 }
